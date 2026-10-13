@@ -1,5 +1,7 @@
 
 *.pt
 *.mp4
+*.csv
 runs/
 data/
+configs/
