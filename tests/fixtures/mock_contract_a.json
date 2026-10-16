@@ -1,0 +1,40 @@
+[
+  {
+    "video_id": "aracaju_faixa_01",
+    "frame_id": 100,
+    "timestamp_s": 3.333,
+    "detections": [
+      {
+        "bbox_xyxy": [120.5, 340.0, 160.0, 430.5],
+        "class_name": "person",
+        "class_id": 0,
+        "confidence": 0.94
+      },
+      {
+        "bbox_xyxy": [400.0, 200.0, 580.0, 360.0],
+        "class_name": "car",
+        "class_id": 2,
+        "confidence": 0.89
+      }
+    ]
+  },
+  {
+    "video_id": "aracaju_faixa_01",
+    "frame_id": 101,
+    "timestamp_s": 3.366,
+    "detections": [
+      {
+        "bbox_xyxy": [121.0, 342.0, 161.0, 432.0],
+        "class_name": "person",
+        "class_id": 0,
+        "confidence": 0.95
+      },
+      {
+        "bbox_xyxy": [390.0, 205.0, 570.0, 365.0],
+        "class_name": "car",
+        "class_id": 2,
+        "confidence": 0.91
+      }
+    ]
+  }
+]

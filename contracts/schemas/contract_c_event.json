@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Contract C - Events and Aggregated Summary",
+  "description": "Contrato C: Eventos de conflito espaco-temporais individuais e sumario agregado por sessao (ICO)",
+  "type": "object",
+  "required": ["video_id", "events", "summary"],
+  "properties": {
+    "video_id": {
+      "type": "string"
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "event_id",
+          "pedestrian_track_id",
+          "vehicle_track_id",
+          "roi_id",
+          "t_entry_pedestrian",
+          "t_exit_pedestrian",
+          "t_entry_vehicle",
+          "pet_s",
+          "is_pet_critical",
+          "pedestrian_wait_time_s",
+          "vehicle_yielded",
+          "is_valid"
+        ],
+        "properties": {
+          "event_id": { "type": "string" },
+          "pedestrian_track_id": { "type": "integer" },
+          "vehicle_track_id": { "type": ["integer", "null"] },
+          "roi_id": { "type": "string" },
+          "t_entry_pedestrian": { "type": "number" },
+          "t_exit_pedestrian": { "type": "number" },
+          "t_entry_vehicle": { "type": ["number", "null"] },
+          "pet_s": { "type": ["number", "null"] },
+          "is_pet_critical": { "type": "boolean" },
+          "pedestrian_wait_time_s": { "type": "number", "minimum": 0.0 },
+          "vehicle_yielded": { "type": "boolean" },
+          "is_valid": { "type": "boolean" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "total_crossings",
+        "eligible_events",
+        "valid_pet_count",
+        "critical_pet_count",
+        "p_crit",
+        "mean_wait_time_s",
+        "e_norm",
+        "non_yield_count",
+        "d_faixa",
+        "ico_score",
+        "risk_level"
+      ],
+      "properties": {
+        "total_crossings": { "type": "integer", "minimum": 0 },
+        "eligible_events": { "type": "integer", "minimum": 0 },
+        "valid_pet_count": { "type": "integer", "minimum": 0 },
+        "critical_pet_count": { "type": "integer", "minimum": 0 },
+        "p_crit": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "mean_wait_time_s": { "type": "number", "minimum": 0.0 },
+        "e_norm": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "non_yield_count": { "type": "integer", "minimum": 0 },
+        "d_faixa": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "ico_score": { "type": "number", "minimum": 0.0, "maximum": 100.0 },
+        "risk_level": { "type": "string", "enum": ["Baixo", "Moderado", "Crítico"] }
+      }
+    }
+  }
+}

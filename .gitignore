@@ -1,7 +1,27 @@
 
+# Pesos e modelos grandes
 *.pt
+*.onnx
+
+# Videos e dados pesados
 *.mp4
+*.avi
+*.mkv
+data/raw/
+data/processed/
+data/annotations/raw_frames/
+
+# CSVs de deteccao de teste soltos na raiz (mas permitir fixtures)
 *.csv
+!tests/fixtures/*.csv
+
+# Pastas de saida e execucao
 runs/
-data/
-configs/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
