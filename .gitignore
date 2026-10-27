@@ -1,4 +1,3 @@
-
 # Pesos e modelos grandes
 *.pt
 *.onnx
@@ -7,12 +6,15 @@
 *.mp4
 *.avi
 *.mkv
+*.webm
 data/raw/
+data/raw/frames/
 data/processed/
 data/annotations/raw_frames/
 
-# CSVs de deteccao de teste soltos na raiz (mas permitir fixtures)
+# CSVs de teste soltos (mas versionar manifesto oficial e fixtures)
 *.csv
+!data/manifest.csv
 !tests/fixtures/*.csv
 
 # Pastas de saida e execucao
@@ -24,4 +26,4 @@ __pycache__/
 # Ambientes virtuais
 .venv/
 venv/
-env/
+env/
