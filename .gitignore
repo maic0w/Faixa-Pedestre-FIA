@@ -1,3 +1,6 @@
 *.pt
 *.mp4
-*\runs
+*.csv
+runs/
+data/
+configs/
