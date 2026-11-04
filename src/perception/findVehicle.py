@@ -9,6 +9,17 @@ from ultralytics import YOLO
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
+MODEL_WEIGHTS = "yolo11n.pt"
+CLASSES = [2, 3, 5, 7]
+
+
+def track_frame(model, source, **overrides):
+    """Reutiliza o detector em quadros consecutivos ou em uma fonte de video."""
+    options = dict(tracker="botsort.yaml", classes=CLASSES, conf=0.10,
+                   iou=0.70, imgsz=640, persist=True, verbose=False)
+    options.update(overrides)
+    return model.track(source=source, **options)
+
 
 def probability(value):
     value = float(value)
@@ -28,7 +39,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path,
                         default=PROJECT_ROOT / "data/raw/BackVehcilesTraffic720p.mp4")
-    parser.add_argument("--model", default="yolo11n.pt")
+    parser.add_argument("--model", default=MODEL_WEIGHTS)
     # 0.10 permite ao BoT-SORT recuperar tracks com deteccoes fracas;
     # o limiar proprio do tracker controla a criacao de novos IDs.
     parser.add_argument("--conf", type=probability, default=0.10)
@@ -53,10 +64,11 @@ def main():
         capture.release()
 
     model = YOLO(args.model)
-    results = model.track(
+    results = track_frame(
+        model,
         source=str(source),
         tracker="botsort.yaml",  # BoT-SORT, nao DeepSORT.
-        classes=[2, 3, 5, 7],
+        classes=CLASSES,
         conf=args.conf,
         iou=args.iou,
         imgsz=args.imgsz,
