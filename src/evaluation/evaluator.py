@@ -1,13 +1,15 @@
-"""Avaliador Quantitativo de Deteccao de Objetos (IoU, Precisao, Revocacao e F1-Score).
+"""Modulo de Avaliacao Quantitativa de Deteccao de Objetos (IoU, Precisao, Revocacao e F1-Score).
 
-Projetado para comparar predicoes de modelos (como YOLO) contra o ground truth anotado
-manualmente pela equipe no CVAT / Label Studio.
-Suporta formato YOLO (.txt) e Contrato A (bbox_xyxy).
+Suporta:
+- Correspondencia um-para-um gulosa com limiar de IoU configuravel (padrao: >= 0.50).
+- Desacoplamento entre limiar de rastreamento (tracking) e limiar de deteccao pura (conf_threshold).
+- Varredura de confianca (confidence sweep) entre 0.10 e 0.70 para analise de sensibilidade de falsos positivos.
+- Leitura de anotacoes Ground Truth e Predicoes no formato canônico YOLO (.txt normalizado) e Contrato A.
 """
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 import numpy as np
 
 
@@ -72,7 +74,12 @@ def yolo_to_xyxy(
 
 
 class DetectionEvaluator:
-    """Avaliador quantitativo para correspondencia um-para-um e metricas por classe."""
+    """Avaliador quantitativo para correspondencia um-para-um e metricas por classe.
+
+    Desacopla explicitamente o limiar de deteccao pura (conf_threshold, padrao 0.25)
+    do limiar permissivo usado pelo rastreador (ex: 0.10), evitando a inundacao artificial
+    de falsos positivos na avaliacao do detector.
+    """
 
     COCO_CLASSES = {
         0: "person",
@@ -86,22 +93,35 @@ class DetectionEvaluator:
     def __init__(
         self,
         iou_threshold: float = 0.50,
+        conf_threshold: float = 0.25,
         class_mapping: Optional[Dict[int, str]] = None,
     ):
         self.iou_threshold = iou_threshold
+        self.conf_threshold = conf_threshold
         self.class_mapping = class_mapping or self.COCO_CLASSES
+
+    def filter_predictions_by_confidence(
+        self,
+        predictions: List[BoundingBox],
+        min_conf: Optional[float] = None,
+    ) -> List[BoundingBox]:
+        """Filtra predicoes aplicando o limiar de confianca de avaliacao."""
+        threshold = self.conf_threshold if min_conf is None else min_conf
+        return [b for b in predictions if b.confidence >= threshold]
 
     def evaluate_frame(
         self,
         ground_truth: List[BoundingBox],
         predictions: List[BoundingBox],
+        conf_threshold: Optional[float] = None,
     ) -> List[Tuple[Optional[BoundingBox], Optional[BoundingBox], str]]:
-        """Realiza correspondencia um-para-um (greedy por confianca/IoU) para um unico quadro.
+        """Realiza correspondencia um-para-um para um unico quadro.
 
-        Retorna lista de tuplas (gt_box, pred_box, match_type), onde match_type e 'TP', 'FP' ou 'FN'.
+        Filtra predições abaixo de conf_threshold e ordena de forma gulosa por confiança.
+        Retorna lista de tuplas (gt_box, pred_box, match_type) com 'TP', 'FP' ou 'FN'.
         """
-        # Ordena predicoes por confianca decrescente
-        sorted_preds = sorted(predictions, key=lambda b: b.confidence, reverse=True)
+        filtered_preds = self.filter_predictions_by_confidence(predictions, conf_threshold)
+        sorted_preds = sorted(filtered_preds, key=lambda b: b.confidence, reverse=True)
         matched_gt_indices = set()
         matches = []
 
@@ -112,7 +132,6 @@ class DetectionEvaluator:
             for idx, gt in enumerate(ground_truth):
                 if idx in matched_gt_indices:
                     continue
-                # Mesma classe e requisito obrigatorio
                 if gt.class_id != pred.class_id:
                     continue
 
@@ -127,7 +146,7 @@ class DetectionEvaluator:
             else:
                 matches.append((None, pred, "FP"))
 
-        # Ground truths nao associados viram False Negatives (FN)
+        # Ground truths nao associados contam como False Negatives (FN)
         for idx, gt in enumerate(ground_truth):
             if idx not in matched_gt_indices:
                 matches.append((gt, None, "FN"))
@@ -175,7 +194,7 @@ class DetectionEvaluator:
                 "f1_score": round(f1, 4),
             }
 
-        # Micro-Average (global)
+        # Micro-Average (global agregado)
         micro_prec = total_tp / (total_tp + total_fp) if (total_tp + total_fp) > 0 else 0.0
         micro_rec = total_tp / (total_tp + total_fn) if (total_tp + total_fn) > 0 else 0.0
         micro_f1 = (2 * micro_prec * micro_rec) / (micro_prec + micro_rec) if (micro_prec + micro_rec) > 0 else 0.0
@@ -189,7 +208,7 @@ class DetectionEvaluator:
             "f1_score": round(micro_f1, 4),
         }
 
-        # Macro-Average
+        # Macro-Average (media aritmetica simples das classes)
         classes_only = [v for k, v in results.items() if k != "MICRO_AVG"]
         if classes_only:
             macro_prec = float(np.mean([c["precision"] for c in classes_only]))
@@ -205,6 +224,35 @@ class DetectionEvaluator:
         }
 
         return results
+
+    def confidence_sweep(
+        self,
+        dataset_gt: List[List[BoundingBox]],
+        dataset_preds: List[List[BoundingBox]],
+        thresholds: Sequence[float] = (0.10, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70),
+    ) -> List[Dict[str, Union[float, Dict]]]:
+        """Executa varredura de limiar de confianca para analisar trade-off P x R e falsos positivos."""
+        sweep_results = []
+        for conf in thresholds:
+            dataset_matches = [
+                self.evaluate_frame(gt, preds, conf_threshold=conf)
+                for gt, preds in zip(dataset_gt, dataset_preds)
+            ]
+            summary = self.evaluate_dataset(dataset_matches)
+            micro = summary.get("MICRO_AVG", {})
+            macro = summary.get("MACRO_AVG", {})
+            sweep_results.append({
+                "conf_threshold": round(conf, 2),
+                "micro_precision": micro.get("precision", 0.0),
+                "micro_recall": micro.get("recall", 0.0),
+                "micro_f1": micro.get("f1_score", 0.0),
+                "macro_f1": macro.get("f1_score", 0.0),
+                "total_fp": micro.get("FP", 0),
+                "total_tp": micro.get("TP", 0),
+                "total_fn": micro.get("FN", 0),
+                "full_summary": summary,
+            })
+        return sweep_results
 
     def format_table(self, report: Dict[str, Dict[str, float]]) -> str:
         """Formata o relatorio quantitativo em tabela legivel estilo markdown."""
@@ -238,12 +286,14 @@ class DetectionEvaluator:
 
 
 if __name__ == "__main__":
-    # Exemplo rapido de execucao sintetica
-    evaluator = DetectionEvaluator(iou_threshold=0.50)
-    # Caixa verdadeira: person [100, 100, 200, 200]
+    evaluator = DetectionEvaluator(iou_threshold=0.50, conf_threshold=0.25)
     gt_sample = [BoundingBox(100, 100, 200, 200, class_id=0, class_name="person")]
-    # Predicao boa (IoU > 0.5): [105, 105, 205, 205]
-    pred_sample = [BoundingBox(105, 105, 205, 205, class_id=0, confidence=0.92, class_name="person")]
+    pred_sample = [
+        # Detecção de alta confiança válida (TP)
+        BoundingBox(105, 105, 205, 205, class_id=0, confidence=0.88, class_name="person"),
+        # Detecção fraca que o rastreador aproveitaria mas o avaliador descarta (conf=0.15 < 0.25)
+        BoundingBox(400, 400, 450, 450, class_id=2, confidence=0.15, class_name="car"),
+    ]
 
     frame_result = evaluator.evaluate_frame(gt_sample, pred_sample)
     summary = evaluator.evaluate_dataset([frame_result])

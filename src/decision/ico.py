@@ -2,12 +2,20 @@
 
 Responsavel por agregar metricas substitutas de seguranca (SSMs) como PET critico,
 tempo de espera normalizado e taxa de nao-cedencia em um score sintetico de 0 a 100
-para apoio a tomada de decisao e priorizacao de vistorias da SMTT.
+para apoio a tomada de decisao e priorizacao de vistorias tecnicas da SMTT.
+
+Enquadramento Epistemico:
+O ICO e uma medida observacional de criticidade relativa para triagem e direcionamento
+de equipes de fiscalizacao e engenharia viaria. Nao representa probabilidade estatistica
+ou risco absoluto de acidente/colisao.
 """
 
 from dataclasses import dataclass, field
+import logging
 from typing import Dict, List, Optional, Tuple
 import numpy as np
+
+logger = logging.getLogger("PedestrianConflict.Decision")
 
 
 @dataclass
@@ -34,11 +42,10 @@ class ConflictEvent:
 
     @property
     def is_pet_critical(self) -> bool:
-        """Verifica se o PET observado viola a margem segura de proximidade (< 2.0s)."""
+        """Verifica se o PET observado viola a margem operacional de proximidade (< 2.0s)."""
         pet = self.pet_s
         if pet is None:
             return False
-        # PET < 0 indica que o veiculo entrou antes do pedestre sair (quase colisao / sobreposicao)
         return pet < self.pet_critical_threshold_s
 
 
@@ -58,7 +65,7 @@ class ICOWeights:
 
 
 class ICOCalculator:
-    """Calculador do Indice de Conflito Observacional e classificador de criticidade."""
+    """Calculador do Indice de Conflito Observacional e classificador de criticidade para apoio a decisao."""
 
     def __init__(
         self,
@@ -72,10 +79,10 @@ class ICOCalculator:
 
     @staticmethod
     def classify_risk(ico_score: float) -> str:
-        """Classifica o score em faixas de criticidade estabelecidas no guia tecnico.
+        """Classifica o score do ICO em faixas de criticidade estabelecidas no guia tecnico.
 
-        - [0, 35): Baixo (Travessia fluida; monitoramento rotineiro)
-        - [35, 65): Moderado (Retencao pontual ou desrespeito eventual)
+        - [0, 35): Baixo (Travessia fluida; condutores respeitam a prioridade; monitoramento de rotina)
+        - [35, 65): Moderado (Retencao pontual ou desrespeito eventual; vistoria de sinalizacao/iluminacao)
         - [65, 100]: Critico (Conflitos frequentes de PET e alta retencao; prioridade de engenharia)
         """
         if ico_score < 35.0:
@@ -92,7 +99,7 @@ class ICOCalculator:
         d_faixa: float,
         weights: Optional[ICOWeights] = None,
     ) -> float:
-        """Calcula o ICO a partir das taxas primarias normalizadas [0, 1]."""
+        """Calcula o escore sintético do ICO a partir das taxas observacionais primarias [0, 1]."""
         w = weights or self.weights
         p_crit_clamped = np.clip(p_crit, 0.0, 1.0)
         e_norm_clamped = np.clip(e_norm, 0.0, 1.0)
@@ -116,6 +123,7 @@ class ICOCalculator:
         eligible_events = len(valid_events)
 
         if eligible_events == 0:
+            logger.info("Sessao %s sem travessias elegiveis. ICO fixado em 0.0 (Baixo).", video_id)
             return {
                 "video_id": video_id,
                 "total_crossings": total_crossings,
@@ -129,24 +137,25 @@ class ICOCalculator:
                 "d_faixa": 0.0,
                 "ico_score": 0.0,
                 "risk_level": "Baixo",
+                "epistemic_note": "Indice de Conflito Observacional (SAD) para priorizacao tecnica, sem inferencia probabilistica de sinistro.",
             }
 
-        # 1. P_crit
+        # 1. Proporção de eventos críticos de PET (P_crit)
         events_with_pet = [e for e in valid_events if e.pet_s is not None]
         valid_pet_count = len(events_with_pet)
         critical_pet_count = sum(1 for e in events_with_pet if e.is_pet_critical)
         p_crit = critical_pet_count / eligible_events if eligible_events > 0 else 0.0
 
-        # 2. E_norm
+        # 2. Tempo de espera médio normalizado (E_norm)
         wait_times = [e.pedestrian_wait_time_s for e in valid_events]
         mean_wait_time = float(np.mean(wait_times)) if wait_times else 0.0
         e_norm = min(1.0, mean_wait_time / self.t_max_wait_s)
 
-        # 3. D_faixa
+        # 3. Taxa de não-cedência na faixa (D_faixa)
         non_yield_count = sum(1 for e in valid_events if not e.vehicle_yielded)
         d_faixa = non_yield_count / eligible_events if eligible_events > 0 else 0.0
 
-        # Score ICO
+        # Score do ICO e classificação em faixa de criticidade
         ico_score = self.calculate_from_rates(p_crit, e_norm, d_faixa)
         risk_level = self.classify_risk(ico_score)
 
@@ -163,6 +172,7 @@ class ICOCalculator:
             "d_faixa": round(d_faixa, 4),
             "ico_score": ico_score,
             "risk_level": risk_level,
+            "epistemic_note": "Indice de Conflito Observacional (SAD) para priorizacao tecnica, sem inferencia probabilistica de sinistro.",
         }
 
     def sensitivity_analysis(
@@ -184,7 +194,6 @@ class ICOCalculator:
         }]
 
         for delta in variations:
-            # Varia w_pet e redistribui a diferenca proporcionalmente
             new_w_pet = self.weights.w_pet * (1.0 + delta)
             remaining = 1.0 - new_w_pet
             sum_other = self.weights.w_wait + self.weights.w_yield
