@@ -122,3 +122,23 @@ Departamento de Computação (DCOMP)
 
 > **Disciplina:** Fundamentos de Inteligência Artificial  
 **Período:** Setembro de 2026
+
+## Calibra??o dos detectores
+
+Execute com Python 3.9+ e as depend?ncias `ultralytics` e `opencv-python` instaladas:
+
+```powershell
+python src/perception/findPedestrian.py --source data/raw/TwoWayTraffic720p.mp4
+python src/perception/findVehicle.py --source data/raw/BackVehcilesTraffic720p.mp4
+python src/perception/findPedestrian.py --source data/raw/TwoWayTraffic720p.mp4 --imgsz 960 --conf 0.10
+```
+
+Os modelos originais foram mantidos: `yolo26n.pt` para pessoas e `yolo11n.pt` para ve?culos. Os pesos podem ser baixados pelo Ultralytics na primeira execu??o. Use `--model` para selecionar outros pesos compat?veis com as classes COCO. Ve?culos incluem carros, motos, ?nibus e caminh?es; bicicletas n?o est?o inclu?das.
+
+O corte de confian?a de 0,10 permite encaminhar detec??es fracas ao BoT-SORT para recuperar trajet?rias; os limiares internos do rastreador continuam controlando a associa??o e a cria??o de IDs. Esse valor n?o garante reconhecimento. A resolu??o padr?o permanece 640; compare com 960 quando houver objetos pequenos ou distantes, observando o custo de processamento. `--iou` controla a supress?o de caixas do detector, n?o a associa??o do rastreador.
+
+Use `--no-show` para executar sem janela, `--save` para salvar o v?deo anotado e `--no-save` para desativar a grava??o. A grava??o est? habilitada por padr?o apenas no detector de ve?culos. A tecla `q` encerra a visualiza??o.
+
+Antes de adotar uma calibra??o, compare os mesmos trechos anotados, incluindo objetos distantes, oclus?es e ilumina??o vari?vel. Registre falsos positivos, objetos perdidos e trocas de ID; compare precis?o e recall por classe. Aumentar a confian?a pode reduzir falsos positivos, mas tamb?m remove detec??es ?teis ? recupera??o de trajet?rias. Os valores fornecidos s?o um ponto de partida, sem valida??o de acur?cia no conjunto local.
+
+Refer?ncia dos par?metros: [documenta??o oficial de rastreamento Ultralytics](https://docs.ultralytics.com/modes/track/).

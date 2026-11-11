@@ -12,12 +12,15 @@ data/raw/frames/
 data/processed/
 data/annotations/raw_frames/
 
+# Configurações locais / temporárias
+configs/
+
 # CSVs de teste soltos (mas versionar manifesto oficial e fixtures)
 *.csv
 !data/manifest.csv
 !tests/fixtures/*.csv
 
-# Pastas de saida e execucao
+# Pastas de saída e execução
 runs/
 .pytest_cache/
 __pycache__/
