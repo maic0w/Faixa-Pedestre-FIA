@@ -1,6 +1,32 @@
+# Pesos e modelos grandes
 *.pt
+*.onnx
+
+# Videos e dados pesados
 *.mp4
-*.csv
-runs/
-data/
+*.avi
+*.mkv
+*.webm
+data/raw/
+data/raw/frames/
+data/processed/
+data/annotations/raw_frames/
+
+# Configurações locais / temporárias
 configs/
+
+# CSVs de teste soltos (mas versionar manifesto oficial e fixtures)
+*.csv
+!data/manifest.csv
+!tests/fixtures/*.csv
+
+# Pastas de saída e execução
+runs/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+
+# Ambientes virtuais
+.venv/
+venv/
+env/

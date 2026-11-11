@@ -1,0 +1,7 @@
+video_id,frame_id,timestamp_s,track_id,class_name,u,v,X_m,Y_m,calibration_valid,detection_confidence
+aracaju_faixa_01,100,3.333,1,person,140.25,430.5,1.52,4.80,True,0.94
+aracaju_faixa_01,101,3.366,1,person,141.00,432.0,1.54,4.85,True,0.95
+aracaju_faixa_01,102,3.400,1,person,142.10,434.0,1.56,4.91,True,0.93
+aracaju_faixa_01,100,3.333,2,car,490.00,360.0,6.20,12.50,True,0.89
+aracaju_faixa_01,101,3.366,2,car,480.00,365.0,5.90,11.80,True,0.91
+aracaju_faixa_01,102,3.400,2,car,470.00,370.0,5.60,11.10,True,0.92

@@ -1,0 +1,48 @@
+{
+  "video_id": "aracaju_faixa_01",
+  "events": [
+    {
+      "event_id": "EV_001",
+      "pedestrian_track_id": 1,
+      "vehicle_track_id": 2,
+      "roi_id": "faixa_principal",
+      "t_entry_pedestrian": 3.5,
+      "t_exit_pedestrian": 7.2,
+      "t_entry_vehicle": 8.5,
+      "pet_s": 1.3,
+      "is_pet_critical": true,
+      "pedestrian_wait_time_s": 8.0,
+      "vehicle_yielded": false,
+      "is_valid": true,
+      "notes": "Veiculo cruzou logo apos saida do pedestre (PET < 2.0s)"
+    },
+    {
+      "event_id": "EV_002",
+      "pedestrian_track_id": 3,
+      "vehicle_track_id": 4,
+      "roi_id": "faixa_principal",
+      "t_entry_pedestrian": 15.0,
+      "t_exit_pedestrian": 19.4,
+      "t_entry_vehicle": 24.1,
+      "pet_s": 4.7,
+      "is_pet_critical": false,
+      "pedestrian_wait_time_s": 4.5,
+      "vehicle_yielded": true,
+      "is_valid": true,
+      "notes": "Travessia fluida com cedencia preventiva do condutor"
+    }
+  ],
+  "summary": {
+    "total_crossings": 2,
+    "eligible_events": 2,
+    "valid_pet_count": 2,
+    "critical_pet_count": 1,
+    "p_crit": 0.50,
+    "mean_wait_time_s": 6.25,
+    "e_norm": 0.208,
+    "non_yield_count": 1,
+    "d_faixa": 0.50,
+    "ico_score": 42.7,
+    "risk_level": "Moderado"
+  }
+}

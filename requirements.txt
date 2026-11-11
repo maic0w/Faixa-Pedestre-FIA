@@ -1,0 +1,24 @@
+# Dependencias do Projeto PedestrianConflict-SE
+# Fundamentos de Inteligencia Artificial - UFS
+
+# Processamento numerico e tabelas
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.10.0
+
+# Visao Computacional e Deep Learning
+opencv-python>=4.8.0
+ultralytics>=8.0.0
+
+# Geometria e Analise Espacial
+shapely>=2.0.0
+
+# Governanca de Contratos e Validacao
+jsonschema>=4.18.0
+pyyaml>=6.0
+
+# Testes e Qualidade de Codigo
+pytest>=7.4.0
+
+# Visualizacao e Graficos
+matplotlib>=3.7.0
